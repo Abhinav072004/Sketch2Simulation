@@ -2,22 +2,23 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from langchain_ollama import ChatOllama
-from utils.agent_utils import read_text_file
-from utils.logging_utils import log_text
+
+from ..utils.agent_utils import read_text_file
+from ..utils.logging_utils import log_text
 
 FIXER_SYSTEM_PROMPT = """
 You are a code-fixing agent.
 
 You will receive:
-1. The HYSYS scripting instructions for instantiation.
-2. The HYSYS scripting instructions for configuration.
+1. The simulator scripting instructions for instantiation.
+2. The simulator scripting instructions for configuration.
 3. The unit view JSON.
 4. A structured validator issues report.
 5. The current Python code.
 
 Your task:
 - Fix only the issues explicitly listed in the validator issues report.
-- Follow the HYSYS scripting instructions exactly.
+- Follow the simulator scripting instructions exactly (HYSYS or Aspen Plus).
 - Prefer inserting new lines.
 - If absolutely required to resolve a listed issue, you may minimally edit
   existing lines that are directly implicated by that issue.

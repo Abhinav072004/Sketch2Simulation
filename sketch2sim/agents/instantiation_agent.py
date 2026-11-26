@@ -90,12 +90,12 @@ def _extract_steps_4_to_5_only(text: str) -> str:
 
 def _build_system_prompt() -> str:
     return (
-        "You are the Instantiation Agent. Fill only Steps 4–5 of the provided HYSYS Python script.\n\n"
+        "You are the Instantiation Agent. Fill only Steps 4–5 of the provided simulator (HYSYS or Aspen Plus) Python script.\n\n"
         "Rules:\n"
         "1. Do not change anything outside Steps 4–5.\n"
         "2. Use only units listed in STRUCTURED_JSON.units.\n"
         "3. Streams must use exact names from feed_streams, intermediate_streams, and product_streams.\n"
-        "4. Use only valid HYSYS COM types listed in the instruction block.\n"
+        "4. Use only the unit kinds listed in the instruction block (add_unit helper).\n"
         "5. Do not connect streams to units in this step.\n"
         "6. Return only a single Python code block that starts with:\n"
         f"{_STEP4_MARKER}\n"

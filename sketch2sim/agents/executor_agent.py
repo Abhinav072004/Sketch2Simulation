@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 from datetime import datetime
 from typing import Any
 
@@ -27,7 +28,7 @@ def run_executor(state: ExecutorState) -> dict[str, Any]:
 
     try:
         result = subprocess.run(
-            ["python", state.code_path],
+            [sys.executable, state.code_path],
             capture_output=True,
             text=True,
             timeout=600,

@@ -8,16 +8,22 @@ from langchain_core.runnables import RunnableLambda
 from langchain_ollama import ChatOllama
 from langgraph.graph import StateGraph
 from pydantic import BaseModel
-from RAG.rag_components import build_component_retriever
-from utils.logging_utils import log_prompt
+
+from ..RAG.vectorless_rag import build_component_retriever
+from ..simulators import SimulatorProfile, get_simulator
+from ..utils.logging_utils import log_prompt
 
 _STEP4_MARKER = r"# === Step 4: Add Unit Operations \(Agent 2\) ==="
 _CLEAN_SUFFIX = {"feed", "fresh", "batch", "raw"}
+# Set VECTORLESS_RAG_REASONING=0 to use only the lexical stage of the retriever.
+_RAG_REASONING = os.getenv("VECTORLESS_RAG_REASONING", "1") != "0"
 
 
 class BasisState(BaseModel):
     description: str
-    template_path: str
+    template_path: str = ""  # empty -> the simulator's default template
+    simulator: str = "hysys"  # "hysys" | "aspenplus"
+    rag_reasoning_model: str | None = None  # default: the Basis model itself
     log_dir: str = "logs"
     structure_json: str | None = None
     materials: list[str] | None = None
@@ -86,15 +92,13 @@ def _extract_materials(structure_json: Any) -> list[str]:
     return unique_materials
 
 
-def _build_knowledge_base(materials: list[str]) -> str:
+def _build_knowledge_base(
+    materials: list[str], reasoning_model: str | None = None
+) -> str:
     if not materials:
         return ""
 
-    retriever = build_component_retriever(
-        excel_path="RAG/components_list.xlsx",
-        mixture_path="RAG/mixture_recipes.txt",
-        persist_dir="RAG/chroma_components",
-    )
+    retriever = build_component_retriever(reasoning_model=reasoning_model)
 
     chunks = []
     for material in materials:
@@ -126,17 +130,20 @@ def _apply_safety_belt(template: str, llm_code: str) -> str:
     return re.sub(pattern, step_block + "\n\n", template, count=1)
 
 
-def _system_prompt() -> str:
+def _system_prompt(profile: SimulatorProfile) -> str:
+    water = "WATER" if profile.key == "aspenplus" else "H2O"
     return (
-        "You are the Basis Agent. Modify only:\n"
+        f"You are the Basis Agent for {profile.display_name}. Modify only:\n"
         "- case_name\n"
-        "- fluidpkg.PropertyPackageName\n"
+        f"- {profile.property_package_field} "
+        f"(examples: {profile.property_package_examples})\n"
         "- Step 3 components section\n\n"
-        "Use only valid HYSYS names from KB lines:\n"
-        "- 'HYSYS_name:'\n"
-        "- 'HYSYS_components:'\n\n"
+        f"Use only valid {profile.display_name} names from KB lines:\n"
+        f"- '{profile.component_field}:'\n"
+        f"- '{profile.recipe_field}:'\n"
+        "Ignore the other name fields in the KB.\n\n"
         "If KB says 'No matches found.' then replace that material with:\n"
-        'components.extend(["Water"]).\n\n'
+        f'components.extend(["{water}"]).\n\n'
         "Follow strict Step 3 pattern:\n"
         "- Initial components = [descriptive names]\n"
         "- One if-block per entry replacing it\n"
@@ -162,13 +169,17 @@ def _user_prompt(
 
 
 def generate_basis_script(state: BasisState, model_name: str) -> dict[str, Any]:
-    template = _load_text(state.template_path)
+    profile = get_simulator(state.simulator)
+    template = _load_text(state.template_path or str(profile.template_path))
     materials = state.materials or (
         _extract_materials(state.structure_json) if state.structure_json else []
     )
-    knowledge_base = _build_knowledge_base(materials)
+    reasoning_model = (
+        (state.rag_reasoning_model or model_name) if _RAG_REASONING else None
+    )
+    knowledge_base = _build_knowledge_base(materials, reasoning_model)
 
-    system_prompt = _system_prompt()
+    system_prompt = _system_prompt(profile)
     user_prompt = _user_prompt(state.description, template, materials, knowledge_base)
 
     log_prompt(
