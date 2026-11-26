@@ -2,8 +2,8 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from langchain_ollama import ChatOllama
-from utils.agent_utils import read_text_file
-from utils.logging_utils import log_text
+from ..utils.agent_utils import read_text_file
+from ..utils.logging_utils import log_text
 
 FIXER_SYSTEM_PROMPT = """
 You are a code-fixing agent.

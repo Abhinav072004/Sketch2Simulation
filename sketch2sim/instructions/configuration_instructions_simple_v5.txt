@@ -1,0 +1,84 @@
+HYSYS CONFIGURATION INSTRUCTIONS (simple, v5)
+=============================================
+
+GOAL
+Write Step 6: connect the existing material streams to the existing unit operations,
+using the units_unit_view JSON as the only source of connections.
+
+AVAILABLE HELPERS (already defined at the top of the script — do not redefine them)
+- connect_inlet(unit, stream)
+- connect_outlet(unit, stream, connect_point)
+The helpers pick the correct HYSYS port (FeedStream, Feeds, VapourProduct,
+LiquidProduct, TubeSideFeed, ...) from the unit's kind. Never set ports directly.
+
+OBJECTS YOU MUST USE
+- units["<unit_id>"] and streams["<stream_id>"] were created in Steps 4–5.
+- Never create units or streams in Step 6.
+- Never use an id that is not a key of units / streams.
+
+HOW TO READ units_unit_view
+Each entry has: unit_id, streams_in[], streams_out[].
+- For every item in streams_in:
+    connect_inlet(units["<unit_id>"], streams["<stream id>"])
+  This applies to feed streams (from_unit is null) and intermediate streams alike.
+- For every item in streams_out:
+    connect_outlet(units["<unit_id>"], streams["<stream id>"], "<connect_point>")
+  This applies to product streams (to_unit is null) and intermediate streams alike.
+  Use the item's connect_point value. If it is null or missing, use "unknown".
+
+Each intermediate stream appears twice: once in streams_out of its source unit and
+once in streams_in of its destination unit. Write both lines. Together they make one
+connection; never write extra lines for the other end.
+
+RULES
+1. Go through units_unit_view in order. Start each unit with a comment line:
+     # --- <unit_id> ---
+2. Write all connect_inlet lines for that unit, then all connect_outlet lines.
+3. One helper call per stream entry. No loops, no conditionals, no try/except.
+4. Do not skip any entry, and do not add connections that are not in the JSON.
+5. connect_point must be one of: "overhead", "bottom", "side", "unknown".
+
+OUTPUT SHAPE (keep the marker line exactly as written)
+# === Step 6: Connect Streams (Agent 3) ===
+# --- P-101 ---
+connect_inlet(units["P-101"], streams["S1"])
+connect_outlet(units["P-101"], streams["S3"], "unknown")
+...
+
+WORKED EXAMPLE
+units_unit_view (shortened):
+  P-101: in [S1], out [S3 (unknown)]
+  MIXER_TO_V-101: in [S2, S3], out [S_MIXER_TO_V-101 (side)]
+  V-101: in [S_MIXER_TO_V-101], out [S4 (unknown)]
+  D-101: in [S4], out [S5 (overhead), S6 (bottom)]
+
+Correct output:
+# === Step 6: Connect Streams (Agent 3) ===
+# --- P-101 ---
+connect_inlet(units["P-101"], streams["S1"])
+connect_outlet(units["P-101"], streams["S3"], "unknown")
+
+# --- MIXER_TO_V-101 ---
+connect_inlet(units["MIXER_TO_V-101"], streams["S2"])
+connect_inlet(units["MIXER_TO_V-101"], streams["S3"])
+connect_outlet(units["MIXER_TO_V-101"], streams["S_MIXER_TO_V-101"], "side")
+
+# --- V-101 ---
+connect_inlet(units["V-101"], streams["S_MIXER_TO_V-101"])
+connect_outlet(units["V-101"], streams["S4"], "unknown")
+
+# --- D-101 ---
+connect_inlet(units["D-101"], streams["S4"])
+connect_outlet(units["D-101"], streams["S5"], "overhead")
+connect_outlet(units["D-101"], streams["S6"], "bottom")
+
+FIXING RUNTIME ERRORS (for the Fixer agent)
+- "Unknown unit kind": change the kind in Step 4 to one listed in HYSYS_OP_TYPES.
+- "Could not create <unit>": the HYSYS type name is not valid for this HYSYS version.
+  Change the unit's kind in Step 4 to the closest alternative kind.
+- "Could not connect stream ... Tried: [...already used...]": the unit has more
+  streams than it has ports. Check the kind in Step 4 (for example a vessel with
+  three outlets should be three_phase_separator, a splitter should be tee).
+- KeyError on units[...] / streams[...]: the id is misspelled or missing in
+  Steps 4–5. Copy it exactly from the unit view JSON.
+- "[MANUAL ACTION NEEDED]" lines are warnings for columns, not errors. Leave them.

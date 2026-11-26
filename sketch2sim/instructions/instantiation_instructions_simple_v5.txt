@@ -1,0 +1,101 @@
+HYSYS INSTANTIATION INSTRUCTIONS (simple, v5)
+=============================================
+
+GOAL
+Write Step 4 (unit operations) and Step 5 (material streams) of the script.
+Nothing is connected in these steps.
+
+AVAILABLE HELPERS (already defined at the top of the script — do not redefine them)
+- add_unit(name, kind)        -> creates a unit operation and returns it
+- add_material_stream(name)   -> creates a material stream and returns it
+Never call flowsheet.Operations.Add or flowsheet.MaterialStreams.Add directly.
+Energy streams are created automatically by add_unit; do not create them.
+
+ALLOWED UNIT KINDS (second argument of add_unit — use the exact lowercase string)
+  mixer, tee, pump, compressor, expander, valve, heater, cooler, heat_exchanger,
+  separator, three_phase_separator, tank, conversion_reactor, cstr, pfr,
+  gibbs_reactor, equilibrium_reactor, component_splitter, distillation_column,
+  absorber
+
+HOW TO CHOOSE THE KIND (use the unit's id, name and tags; first match wins)
+  mixer / mixing point / junction / MIXER_TO_*        -> mixer
+  splitter / tee / divider                             -> tee
+  pump                                                 -> pump
+  compressor / blower / fan                            -> compressor
+  expander / turbine                                   -> expander
+  valve / mixing valve / control valve / let-down      -> valve
+  heat exchanger with TWO process inlets               -> heat_exchanger
+  heater / preheater / pre-heat train / furnace /
+    fired heater / boiler / standalone reboiler        -> heater
+  cooler / chiller / air cooler / standalone condenser -> cooler
+  three-phase separator / decanter (gas + oil + water) -> three_phase_separator
+  separator / flash drum / knock-out drum / desalter /
+    electrostatic separator / settler / reflux drum    -> separator
+  storage tank / vessel / tank                         -> tank
+  reactor with no further detail                       -> conversion_reactor
+  CSTR / stirred reactor                               -> cstr
+  plug flow / tubular reactor / PFR                    -> pfr
+  Gibbs reactor                                        -> gibbs_reactor
+  equilibrium reactor                                  -> equilibrium_reactor
+  component splitter / membrane / ideal separation     -> component_splitter
+  distillation column / tower / fractionator / stripper -> distillation_column
+  absorber / scrubber                                  -> absorber
+  anything else                                        -> the closest kind above
+
+SPECIAL CASES
+- Units named MIXER_TO_<X> were inserted by the normalizer. They are mixers.
+- A unit with "hysys_overrides" is a column whose condenser, reboiler, reflux drum
+  and reflux pump are already integrated. Those units were removed from the JSON.
+  Do NOT add them again.
+
+STEP 4 RULES
+1. Add every unit in STRUCTURED_JSON.units exactly once, in the same order.
+2. The HYSYS name and the dictionary key are the unit "id", copied exactly.
+3. One line per unit, in this form:
+     units["<id>"] = add_unit("<id>", "<kind>")
+
+STEP 5 RULES
+1. Add every stream from feed_streams, then intermediate_streams, then product_streams,
+   exactly once each. Use only streams listed in the JSON.
+2. The HYSYS name and the dictionary key are the stream "id", copied exactly.
+3. One line per stream, in this form:
+     streams["<id>"] = add_material_stream("<id>")
+4. Do not connect anything in Step 5.
+
+OUTPUT SHAPE (keep the two marker lines exactly as written)
+# === Step 4: Add Unit Operations (Agent 2) ===
+units = {}
+units["P-101"] = add_unit("P-101", "pump")
+...
+
+# === Step 5: Add Material Streams (Agent 2) ===
+streams = {}
+streams["S1"] = add_material_stream("S1")
+...
+
+WORKED EXAMPLE
+STRUCTURED_JSON (shortened):
+  units: P-101 "Crude oil pump", MIXER_TO_V-101 "Mixer to V-101" (tags: mixer),
+         V-101 "Mixing valve", D-101 "Electrostatic separator"
+  feed_streams: S1 -> P-101, S2 -> MIXER_TO_V-101
+  intermediate_streams: S3 P-101 -> MIXER_TO_V-101, S_MIXER_TO_V-101 MIXER_TO_V-101 -> V-101,
+                        S4 V-101 -> D-101
+  product_streams: S5 from D-101 (overhead), S6 from D-101 (bottom)
+
+Correct output:
+# === Step 4: Add Unit Operations (Agent 2) ===
+units = {}
+units["P-101"] = add_unit("P-101", "pump")
+units["MIXER_TO_V-101"] = add_unit("MIXER_TO_V-101", "mixer")
+units["V-101"] = add_unit("V-101", "valve")
+units["D-101"] = add_unit("D-101", "separator")
+
+# === Step 5: Add Material Streams (Agent 2) ===
+streams = {}
+streams["S1"] = add_material_stream("S1")
+streams["S2"] = add_material_stream("S2")
+streams["S3"] = add_material_stream("S3")
+streams["S_MIXER_TO_V-101"] = add_material_stream("S_MIXER_TO_V-101")
+streams["S4"] = add_material_stream("S4")
+streams["S5"] = add_material_stream("S5")
+streams["S6"] = add_material_stream("S6")

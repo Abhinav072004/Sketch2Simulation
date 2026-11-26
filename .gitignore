@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.env
+logs/
+outputs/
+sketch2sim/RAG/chroma_components/
+*.hsc
+*.bk*

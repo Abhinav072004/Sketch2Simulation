@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -8,11 +9,12 @@ from langchain_core.runnables import RunnableLambda
 from langchain_ollama import ChatOllama
 from langgraph.graph import StateGraph
 from pydantic import BaseModel
-from RAG.rag_components import build_component_retriever
-from utils.logging_utils import log_prompt
+from ..RAG.rag_components import build_component_retriever
+from ..utils.logging_utils import log_prompt
 
 _STEP4_MARKER = r"# === Step 4: Add Unit Operations \(Agent 2\) ==="
 _CLEAN_SUFFIX = {"feed", "fresh", "batch", "raw"}
+_RAG_DIR = Path(__file__).resolve().parent.parent / "RAG"
 
 
 class BasisState(BaseModel):
@@ -91,9 +93,9 @@ def _build_knowledge_base(materials: list[str]) -> str:
         return ""
 
     retriever = build_component_retriever(
-        excel_path="RAG/components_list.xlsx",
-        mixture_path="RAG/mixture_recipes.txt",
-        persist_dir="RAG/chroma_components",
+        excel_path=_RAG_DIR / "components_list.xlsx",
+        mixture_path=_RAG_DIR / "mixture_recipes.txt",
+        persist_dir=str(_RAG_DIR / "chroma_components"),
     )
 
     chunks = []
