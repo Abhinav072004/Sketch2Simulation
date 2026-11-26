@@ -1,5 +1,5 @@
-HYSYS INSTANTIATION INSTRUCTIONS (simple, v5)
-=============================================
+INSTANTIATION INSTRUCTIONS (simple, v5) — Aspen HYSYS and Aspen Plus
+==================================================================
 
 GOAL
 Write Step 4 (unit operations) and Step 5 (material streams) of the script.
@@ -50,14 +50,15 @@ SPECIAL CASES
 
 STEP 4 RULES
 1. Add every unit in STRUCTURED_JSON.units exactly once, in the same order.
-2. The HYSYS name and the dictionary key are the unit "id", copied exactly.
+2. The name passed to add_unit and the dictionary key are the unit "id", copied exactly.
+   (Aspen Plus shortens IDs internally; always use the full id in the script.)
 3. One line per unit, in this form:
      units["<id>"] = add_unit("<id>", "<kind>")
 
 STEP 5 RULES
 1. Add every stream from feed_streams, then intermediate_streams, then product_streams,
    exactly once each. Use only streams listed in the JSON.
-2. The HYSYS name and the dictionary key are the stream "id", copied exactly.
+2. The name passed to add_material_stream and the dictionary key are the stream "id", copied exactly.
 3. One line per stream, in this form:
      streams["<id>"] = add_material_stream("<id>")
 4. Do not connect anything in Step 5.

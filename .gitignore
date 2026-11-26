@@ -4,6 +4,5 @@ __pycache__/
 .env
 logs/
 outputs/
-sketch2sim/RAG/chroma_components/
 *.hsc
 *.bk*

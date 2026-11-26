@@ -1,5 +1,5 @@
-HYSYS CONFIGURATION INSTRUCTIONS (simple, v5)
-=============================================
+CONFIGURATION INSTRUCTIONS (simple, v5) — Aspen HYSYS and Aspen Plus
+==================================================================
 
 GOAL
 Write Step 6: connect the existing material streams to the existing unit operations,
@@ -8,8 +8,8 @@ using the units_unit_view JSON as the only source of connections.
 AVAILABLE HELPERS (already defined at the top of the script — do not redefine them)
 - connect_inlet(unit, stream)
 - connect_outlet(unit, stream, connect_point)
-The helpers pick the correct HYSYS port (FeedStream, Feeds, VapourProduct,
-LiquidProduct, TubeSideFeed, ...) from the unit's kind. Never set ports directly.
+The helpers pick the correct simulator port (HYSYS: FeedStream, VapourProduct, ...
+Aspen Plus: F(IN), V(OUT), L(OUT), ...) from the unit's kind. Never set ports directly.
 
 OBJECTS YOU MUST USE
 - units["<unit_id>"] and streams["<stream_id>"] were created in Steps 4–5.
@@ -73,8 +73,8 @@ connect_outlet(units["D-101"], streams["S5"], "overhead")
 connect_outlet(units["D-101"], streams["S6"], "bottom")
 
 FIXING RUNTIME ERRORS (for the Fixer agent)
-- "Unknown unit kind": change the kind in Step 4 to one listed in HYSYS_OP_TYPES.
-- "Could not create <unit>": the HYSYS type name is not valid for this HYSYS version.
+- "Unknown unit kind": change the kind in Step 4 to one listed in the instructions.
+- "Could not create <unit>": the type name is not valid for this simulator version.
   Change the unit's kind in Step 4 to the closest alternative kind.
 - "Could not connect stream ... Tried: [...already used...]": the unit has more
   streams than it has ports. Check the kind in Step 4 (for example a vessel with
